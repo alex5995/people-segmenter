@@ -1,7 +1,11 @@
-dropbox==10.10.0
+dropbox10.10.0
 fastapi==0.61.2
 Pillow==8.0.1
 python-multipart==0.0.5
-torch==1.7.0
-torchvision==0.8.1
 uvicorn==0.12.2
+
+--find-links https://download.pytorch.org/whl/torch_stable.html
+torch==1.7.0+cpu
+
+--find-links https://download.pytorch.org/whl/torch_stable.html
+torchvision==0.8.1+cpu
