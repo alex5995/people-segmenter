@@ -1,4 +1,4 @@
-dropbox10.10.0
+dropbox==10.10.0
 fastapi==0.61.2
 Pillow==8.0.1
 python-multipart==0.0.5
