@@ -1,3 +1,6 @@
+import os
+os.system('python download.py')
+
 import sys
 sys.path.insert(0, 'segmenter')
 
