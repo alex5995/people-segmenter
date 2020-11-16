@@ -1,5 +1,6 @@
 import os
 os.system('python download.py')
+print('!!! MODEL DOWNLOADED !!!')
 
 import sys
 sys.path.insert(0, 'segmenter')
