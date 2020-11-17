@@ -1,2 +1,3 @@
-people-segmenter-model
+model.bin
 *__pycache__*
+.env

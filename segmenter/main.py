@@ -1,6 +1,5 @@
 import os
 os.system('python download.py')
-print('!!! MODEL DOWNLOADED !!!')
 
 import sys
 sys.path.insert(0, 'segmenter')
@@ -11,7 +10,7 @@ from io import BytesIO
 from model import load_model, predict_mask
 
 app = FastAPI()
-model = load_model('people-segmenter-model/model.bin')
+model = load_model('./model.bin')
 
 def read_image_file(file) -> Image.Image:
     img = Image.open(BytesIO(file)).convert("L").convert("RGB")
