@@ -13,7 +13,7 @@ app = FastAPI()
 model = load_model('./model.bin')
 
 def read_image_file(file) -> Image.Image:
-    img = Image.open(BytesIO(file)).convert("L").convert("RGB")
+    img = Image.open(BytesIO(file)).convert("RGB")
     return img
     
 def get_image_bytes(img):
