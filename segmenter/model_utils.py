@@ -8,13 +8,13 @@ from torchvision import transforms as T
 from model import ResNetUNet
 
 img_trans = T.Compose([
-    T.CenterCrop(224),
+    T.CenterCrop(1024),
     T.ToTensor(),
     T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]) # imagenet
 ])
 
 mask_trans = T.Compose([
-  T.CenterCrop(224),
+  T.CenterCrop(1024),
   T.ToTensor()
 ])
 
