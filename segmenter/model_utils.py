@@ -8,14 +8,16 @@ from torchvision import transforms as T
 from model import ResNetUNet
 
 img_trans = T.Compose([
-    T.CenterCrop(512),
+    T.Resize(256),
+    T.CenterCrop(256),
     T.ToTensor(),
     T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]) # imagenet
 ])
 
 mask_trans = T.Compose([
-  T.CenterCrop(512),
-  T.ToTensor()
+    T.Resize(256),
+    T.CenterCrop(256),
+    T.ToTensor()
 ])
 
 def load_model(model_path, num_classes=1):
