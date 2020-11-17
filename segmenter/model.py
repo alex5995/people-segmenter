@@ -1,42 +1,80 @@
-import sys
-sys.path.insert(0, 'segmenter')
-
-from torchvision.models.detection import maskrcnn_resnet50_fpn
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
-from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
-from dataset import get_transform
 import torch
-import numpy as np
-from PIL import Image
+import torch.nn as nn
+import torchvision.models
 
-predict_transform = get_transform(train=False)
+def convrelu(in_channels, out_channels, kernel, padding):
+  return nn.Sequential(
+    nn.Conv2d(in_channels, out_channels, kernel, padding=padding),
+    nn.ReLU(inplace=True),
+  )
 
-def get_model_instance_segmentation(num_classes, pretrained=True):
 
-    model = maskrcnn_resnet50_fpn(pretrained=pretrained, pretrained_backbone=pretrained)
+class ResNetUNet(nn.Module):
+  def __init__(self, n_class):
+    super().__init__()
 
-    in_features = model.roi_heads.box_predictor.cls_score.in_features
-    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+    self.base_model = torchvision.models.resnet18(pretrained=False)
+    self.base_layers = list(self.base_model.children())
 
-    in_features_mask = model.roi_heads.mask_predictor.conv5_mask.in_channels
-    hidden_layer = 256
-    model.roi_heads.mask_predictor = MaskRCNNPredictor(in_features_mask, hidden_layer, num_classes)
+    self.layer0 = nn.Sequential(*self.base_layers[:3]) # size=(N, 64, x.H/2, x.W/2)
+    self.layer0_1x1 = convrelu(64, 64, 1, 0)
+    self.layer1 = nn.Sequential(*self.base_layers[3:5]) # size=(N, 64, x.H/4, x.W/4)
+    self.layer1_1x1 = convrelu(64, 64, 1, 0)
+    self.layer2 = self.base_layers[5]  # size=(N, 128, x.H/8, x.W/8)
+    self.layer2_1x1 = convrelu(128, 128, 1, 0)
+    self.layer3 = self.base_layers[6]  # size=(N, 256, x.H/16, x.W/16)
+    self.layer3_1x1 = convrelu(256, 256, 1, 0)
+    self.layer4 = self.base_layers[7]  # size=(N, 512, x.H/32, x.W/32)
+    self.layer4_1x1 = convrelu(512, 512, 1, 0)
 
-    return model
+    self.upsample = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
 
-def load_model(model_path, num_classes=2):
-    
-    model = get_model_instance_segmentation(num_classes=num_classes, pretrained=False)
-    model.load_state_dict(torch.load(model_path))
-    model.eval()
-    return model
+    self.conv_up3 = convrelu(256 + 512, 512, 3, 1)
+    self.conv_up2 = convrelu(128 + 512, 256, 3, 1)
+    self.conv_up1 = convrelu(64 + 256, 256, 3, 1)
+    self.conv_up0 = convrelu(64 + 256, 128, 3, 1)
 
-def predict_mask(model, img):
+    self.conv_original_size0 = convrelu(3, 64, 3, 1)
+    self.conv_original_size1 = convrelu(64, 64, 3, 1)
+    self.conv_original_size2 = convrelu(64 + 128, 64, 3, 1)
 
-    tensor_img, _ = predict_transform(img, img)
-    outputs = model(tensor_img.unsqueeze(0))
-    reverse_mask = outputs[0]['masks'][0].squeeze().detach().numpy() < 0.5
+    self.conv_last = nn.Conv2d(64, n_class, 1)
 
-    img = np.array(img.convert('RGBA'))
-    img[reverse_mask,:] = [255,255,255,0]
-    return Image.fromarray(img)
+  def forward(self, input):
+    x_original = self.conv_original_size0(input)
+    x_original = self.conv_original_size1(x_original)
+
+    layer0 = self.layer0(input)
+    layer1 = self.layer1(layer0)
+    layer2 = self.layer2(layer1)
+    layer3 = self.layer3(layer2)
+    layer4 = self.layer4(layer3)
+
+    layer4 = self.layer4_1x1(layer4)
+    x = self.upsample(layer4)
+    layer3 = self.layer3_1x1(layer3)
+    x = torch.cat([x, layer3], dim=1)
+    x = self.conv_up3(x)
+
+    x = self.upsample(x)
+    layer2 = self.layer2_1x1(layer2)
+    x = torch.cat([x, layer2], dim=1)
+    x = self.conv_up2(x)
+
+    x = self.upsample(x)
+    layer1 = self.layer1_1x1(layer1)
+    x = torch.cat([x, layer1], dim=1)
+    x = self.conv_up1(x)
+
+    x = self.upsample(x)
+    layer0 = self.layer0_1x1(layer0)
+    x = torch.cat([x, layer0], dim=1)
+    x = self.conv_up0(x)
+
+    x = self.upsample(x)
+    x = torch.cat([x, x_original], dim=1)
+    x = self.conv_original_size2(x)
+
+    out = self.conv_last(x)
+
+    return out

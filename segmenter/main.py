@@ -7,7 +7,7 @@ sys.path.insert(0, 'segmenter')
 from fastapi import FastAPI, File, UploadFile, Response
 from PIL import Image
 from io import BytesIO
-from model import load_model, predict_mask
+from model_utils import load_model, predict_mask
 
 app = FastAPI()
 model = load_model('./model.bin')
