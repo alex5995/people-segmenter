@@ -1,5 +1,5 @@
 import os
-os.system('python download.py')
+os.system('python segmenter/download_model.py')
 
 import sys
 sys.path.insert(0, 'segmenter')
