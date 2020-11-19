@@ -21,7 +21,7 @@ def get_image_bytes(img):
     img.save(img_byte_arr, format='PNG')
     return img_byte_arr.getvalue()
 
-@app.post("/predict/image")
+@app.post("/segmentation")
 async def predict_api(file: UploadFile = File(...)):
     img = read_image_file(await file.read())
     masked_img = predict_mask(model, img)
